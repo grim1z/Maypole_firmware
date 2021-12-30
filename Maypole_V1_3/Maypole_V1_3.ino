@@ -225,14 +225,22 @@ void setup(void)
       pinMode(27,OUTPUT);     //SD RESET
       Serial.print(F("Initializing USB mode as Default..."));
       SPIFFS.begin();
+      change_to_usb_mode();
+
+      setupWifi();
+
       MDNS.begin(host);
       if (!MDNS.begin(host)) {
-        Serial.println("Error startng mDNS responder");
+        Serial.println("Error starting mDNS responder");
       }
-      Serial.println("mDNS server started");
-      change_to_usb_mode(); 
-      setupWifi();
-      //WiFi.softAP("pen_drive","12345678");
+      else
+      {
+        Serial.println("mDNS server started");
+        Serial.print("Open http://");
+        Serial.print(host);
+        Serial.println(".local to see the webpage");
+      }
+
       ///////////////////////////// Server Commands 
       server.on("/",              Homepage);
       server.on("/MyFiles",       My_Files);
