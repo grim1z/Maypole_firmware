@@ -9,6 +9,11 @@
 #include <Update.h>
 #include <ESPmDNS.h>
 
+#define GPIO_SELECT_SD_READER     25 // OUTPUT, Select pin, Buffer LOW for ESP and HIGH for card reader
+#define GPIO_SD_READER_CARDDET_N  26 // OUTPUT, SDcard chip detect (active LOW)
+#define GPIO_SD_READER_RESET_N    27 // OUTPUT, Card reader chip RESET (active LOW)
+#define GPIO_SD_POWER              4 // OUTPUT, HIGH to Powerup microSD card (MOSFET)
+
 WebServer server(80);
 WiFiMulti wifiMulti;
 DynamicJsonDocument doc(2048);
@@ -177,17 +182,16 @@ void change_to_usb_mode()
 {
   SD.end();
   SPI.end();
-  digitalWrite(4,LOW);
+  digitalWrite(GPIO_SD_POWER, LOW); // shutdown SD card
   SD_present = false;
   timer.setTimeout(500,[]()
   {
-    digitalWrite(27,HIGH);
-    digitalWrite(4,HIGH);
-  //        digitalWrite(4,LOW);    // Buffer IC OFF  
+    digitalWrite(GPIO_SD_READER_RESET_N, HIGH); // put card reader chip out of reset
+    digitalWrite(GPIO_SD_POWER, HIGH);          // power up SD card
   timer.setTimeout(100,[]()
   {
-    digitalWrite(25,HIGH);    // Buffer IC OFF
-    digitalWrite(26,LOW);
+    digitalWrite(GPIO_SELECT_SD_READER, HIGH);   // Buffer IC OFF
+    digitalWrite(GPIO_SD_READER_CARDDET_N, LOW); // make card reader chip detect SD card insertion
     Serial.println("CHIP DETECTED");// chip detect
   });
   });
@@ -197,17 +201,17 @@ void change_to_usb_mode()
 void change_to_sd_mode()
 {
   Serial.print(F("Initializing SD card..."));
-  digitalWrite(25,LOW);
-  digitalWrite(4,LOW);
+  digitalWrite(GPIO_SELECT_SD_READER, LOW); // Buffer IC LOW: connect ESP to the SD card
+  digitalWrite(GPIO_SD_POWER, LOW);         // shutdown SD card
   //SD_present = true;
   timer.setTimeout(100,[]()
   {
-    digitalWrite(4,HIGH);
+    digitalWrite(GPIO_SD_POWER, HIGH);      // power up SD card
     Serial.println("SD card mode changed");
-    digitalWrite(27,LOW);
-    digitalWrite(26,HIGH);
+    digitalWrite(GPIO_SD_READER_RESET_N, LOW);    // force card reader chip into reset
+    digitalWrite(GPIO_SD_READER_CARDDET_N, HIGH); // make card reader chip detect no SD card
     delay(20);
-    digitalWrite(25,LOW);  //BUffer IC LOW 
+    digitalWrite(GPIO_SELECT_SD_READER, LOW);     // Buffer IC LOW: connect ESP to the SD card
     while(!SD.begin()){
       Serial.println("SD Card not properly created");
     }
@@ -219,10 +223,11 @@ void change_to_sd_mode()
 void setup(void)
 {
       Serial.begin(115200);
-      pinMode(25,OUTPUT);     //Select pin, Buffer LOW for ESP and HIGH for card reader 
-      pinMode(26,OUTPUT);     //SDcard chip detect (active LOW)
-      pinMode(4,OUTPUT);      //HIGH to Powerup microSD card (MOSFET)
-      pinMode(27,OUTPUT);     //SD RESET
+      pinMode(GPIO_SELECT_SD_READER, OUTPUT);
+      pinMode(GPIO_SD_READER_CARDDET_N, OUTPUT);
+      pinMode(GPIO_SD_POWER, OUTPUT);
+      pinMode(GPIO_SD_READER_RESET_N,OUTPUT);
+
       Serial.print(F("Initializing USB mode as Default..."));
       SPIFFS.begin();
       change_to_usb_mode();
