@@ -229,9 +229,15 @@ void setup(void)
       pinMode(GPIO_SD_READER_RESET_N,OUTPUT);
 
       Serial.print(F("Initializing USB mode as Default..."));
-      SPIFFS.begin();
-      change_to_usb_mode();
+      //change_to_usb_mode();
+      SD_present = false;
+      digitalWrite(GPIO_SELECT_SD_READER, HIGH);  // Buffer IC OFF
+      digitalWrite(GPIO_SD_READER_RESET_N, HIGH); // put card reader chip out of reset
+      digitalWrite(GPIO_SD_POWER, HIGH);          // power up SD card
+      delay(50);
+      digitalWrite(GPIO_SD_READER_CARDDET_N, LOW); // make card reader chip detect SD card insertion
 
+      SPIFFS.begin();
       setupWifi();
 
       MDNS.begin(host);
@@ -291,6 +297,7 @@ void setup(void)
       });
       ///////////////////////////// End of Request commands
       server.begin();
+
       MDNS.addService("_http", "_tcp", 80);
       MDNS.addServiceTxt("_http", "_tcp", "board", "ESP32");
       Serial.println("HTTP server started");
